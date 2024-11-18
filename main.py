@@ -27,7 +27,7 @@ class Redactor:
 
         # Iterate through each page
         for page in doc:
-            page.wrap_contents()  # Fix alignment issues
+            # page.wrap_contents()  # Fix alignment issues
 
             # Extract text using a method that retains control characters
             lines = page.get_text("text-with-control").splitlines()
@@ -41,12 +41,14 @@ class Redactor:
                         # Add redaction annotations (fill with black color)
                         for area in areas:
                             page.add_redact_annot(area, fill=(0, 0, 0))
+
+                            
             
  
             page.apply_redactions()
         file_name = os.path.basename(self.path)
         output_path = f"pdfs/redacted/redacted_{file_name}"
-        doc.save(output_path)
+        doc.save(output_path, garbage=4, deflate=True)
 
         end_time= time.time()
 
