@@ -1,4 +1,5 @@
 import fitz  # PyMuPDF
+import pymupdf4llm
 import re
 import unicodedata
 import argparse
@@ -6,19 +7,29 @@ import os
 
 import time
 
+'''This approach wont work (Im so dumb) since it's a scanned version and no text is encoded in the first place'''
 
 
 class Redactor:
-    def __init__(self, path):
+    def __init__(self, path, total_redcs=0):
         self.path = path
+        self.total_redcs=total_redcs
+
+
+
+
 
     def is_english_word(self, word):
-        """Check if the word contains only Latin characters."""
-        for char in word:
-            # Check if the character is Latin or a common punctuation mark
-            if not ('LATIN' in unicodedata.name(char, '') or char in ".,!?"):
-                return False
-        return True
+        """Check if the first char word contains Latin characters."""
+        if not word:
+            return False
+        
+        print(f"Checking word: {word}")
+        if ('LATIN' in unicodedata.name(word[0], '') or word[0] in ".,!?"):
+            return True
+        
+        
+        return False
 
     def redaction(self):
         """Redact English words from the PDF."""
@@ -36,8 +47,10 @@ class Redactor:
                 words = line.split()
                 for word in words:
                     if self.is_english_word(word):
+                        self.total_redcs+=1
                         # Locate the position of each detected word on the page
                         areas = page.search_for(word)
+
                         # Add redaction annotations (fill with black color)
                         for area in areas:
                             page.add_redact_annot(area, fill=(0, 0, 0))
@@ -52,14 +65,22 @@ class Redactor:
 
         time_elapsed = end_time-start_time
 
-        print(f"Successfully redacted English text in {time_elapsed}s. Saved as '{output_path}'.")
+        print(f"Successfully redacted English text in {time_elapsed}s. Saved as '{output_path}'. Redacted {self.total_redcs} words")
+        
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(description="Redact English words from a PDF.")
+
     parser.add_argument('--file', type=str, required=True, help='Path to the input PDF file')
     args = parser.parse_args()
 
 
-    redactor = Redactor(args.file)
-    redactor.redaction()
+    md_text = pymupdf4llm.to_markdown(args.file)
+    output_file = "output.md"  
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write(md_text)
+    print(f"Markdown content has been written to '{output_file}'")
+
+
+    # redactor = Redactor(args.file)
+    # redactor.redaction()
