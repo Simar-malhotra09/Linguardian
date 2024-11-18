@@ -17,8 +17,6 @@ class Redactor:
 
 
 
-
-
     def is_english_word(self, word):
         """Check if the first char word contains Latin characters."""
         if not word:
