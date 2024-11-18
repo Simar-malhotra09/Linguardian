@@ -46,7 +46,7 @@ class Redactor:
             page.apply_redactions()
         file_name = os.path.basename(self.path)
         output_path = f"pdfs/redacted/redacted_{file_name}"
-        doc.save(output_path)
+        doc.save(output_path, garbage=4, deflate=True)
 
         end_time= time.time()
 
