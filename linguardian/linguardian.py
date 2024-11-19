@@ -5,7 +5,7 @@ import time
 from typing import List
 
 class Linguardian:
-    def __init__(self, pdf_path: str, output_pdf_path: str, ):
+    def __init__(self, pdf_path: str, output_pdf_path: str ):
 
         list_of_blurred_words = [] 
         self.pdf_path = pdf_path
@@ -24,7 +24,7 @@ class Linguardian:
                 # Check if the word is in English (ASCII alphabet)
                 if all(char.isascii() and char.isalpha() for char in word):
                     self.list_of_blurred_words.append(word)
-                    
+
                     # Get the bounding box of the word
                     x, y, w, h = ocr_data['left'][j], ocr_data['top'][j], ocr_data['width'][j], ocr_data['height'][j]
                     
@@ -60,3 +60,7 @@ class Linguardian:
         print(f"Blurred images saved as {self.output_pdf_path}_page_X.png")
         print(f"Time taken: {time_elapsed} for {len(images)} pages")
         # print("\n".join(word for word in self.list_of_blurred_words))
+
+        return images
+
+    
