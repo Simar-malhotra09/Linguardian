@@ -16,42 +16,79 @@ class Linguardian:
     def extract_text_from_image(self, image):
         """Extract text and word positions from an image."""
         return pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT, lang='jpn+eng')
+    
+    '''
+    returns:
+        {
+        'level': []
+        'page_num': []
+        'block_num': []
+        'par_num': []
+        'line_num': []
+        'word_num': []
+        'left':[]
+        'top': []
+        'width':[]
+        'height':[] 
+        'text':[]
+        }
+    '''
 
     def blur_english_words(self, image, ocr_data):
+        all_blurred_words_and_bbox=[]
         """Blur out English words in the image."""
         for j, word in enumerate(ocr_data['text']):
             if word.strip():  # Skip empty words
-                # Check if the word is in English (ASCII alphabet)
+                print(f"Word: {word}, Coordinates: ({ocr_data['left'][j]}, {ocr_data['top'][j]}, {ocr_data['width'][j]}, {ocr_data['height'][j]})")
                 if all(char.isascii() and char.isalpha() for char in word):
                     self.list_of_blurred_words.append(word)
 
                     # Get the bounding box of the word
                     x, y, w, h = ocr_data['left'][j], ocr_data['top'][j], ocr_data['width'][j], ocr_data['height'][j]
+
+                    all_blurred_words_and_bbox.append({
+                        "word": word,
+                        "coordinates": (x, y, x + w, y + h)
+                    })
                     
                     # Blur the area containing the English word
                     word_image = image.crop((x, y, x + w, y + h))
                     blurred_word_image = word_image.filter(ImageFilter.GaussianBlur(radius=5))
                     image.paste(blurred_word_image, (x, y))
-        return image
+        return image, all_blurred_words_and_bbox
+
 
     def save_image(self, image, page_num):
         """Save the image with blurred English words."""
-        image.save(f"{self.output_pdf_path}_page_{page_num + 1}.png")
+        image_path=f"{self.output_pdf_path}_page_{page_num + 1}.png"
+        image.save(image_path)
 
     def process_pdf(self):
         """Process the PDF by extracting text, blurring English words, and saving the images."""
         start_time= time.time()
         images = convert_from_path(self.pdf_path)
+        ''' 
+        Returns:
+            A list of Pillow images, one for each page between first_page and last_page
+        Return type:
+            List[Image.Image]
+        '''
+        output_data = [] 
 
         for i, image in enumerate(images):
             
             ocr_data = self.extract_text_from_image(image)
 
             
-            blurred_image = self.blur_english_words(image, ocr_data)
+            blurred_image, all_blurred_words_and_bbox= self.blur_english_words(image, ocr_data)
 
          
-            self.save_image(blurred_image, i)
+            image_path=self.save_image(blurred_image, i)
+
+            output_data.append({
+                "image_path": image_path,
+                "blurred_words_and_bbox": all_blurred_words_and_bbox
+            })
 
         end_time=time.time()
         time_elapsed= end_time-start_time
@@ -61,6 +98,6 @@ class Linguardian:
         print(f"Time taken: {time_elapsed} for {len(images)} pages")
         # print("\n".join(word for word in self.list_of_blurred_words))
 
-        return images
+        return output_data
 
     

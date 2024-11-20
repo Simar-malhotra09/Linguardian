@@ -35,6 +35,7 @@ if not os.path.exists(output_dir):
 
 @app.post("/process-pdf")
 async def process_pdf(file: UploadFile = File(...)):
+    
     session = Session()  # Create a database session
     unique_filename = f"temp_{uuid4().hex}.pdf"
 
@@ -63,22 +64,26 @@ async def process_pdf(file: UploadFile = File(...)):
             session.commit()  # Commit to get the new page's ID
             
             # Save the blur mappings for this page
-            for mapping in blurred_words_and_bbox:  
-                blur_mapping = BlurMapping(
-                    page_id=new_page.id,  # Reference to the page
-                    bounding_box=json.dumps(mapping["coordinates"]),  # Serialize coordinates to JSON
-                    original_word=mapping["word"]  # Use "word" for original text
+            BATCH_SIZE = 100 
+            blur_mappings = [
+                BlurMapping(
+                    page_id=new_page.id,
+                    bounding_box=json.dumps(mapping["coordinates"]),
+                    original_word=mapping["word"]
                 )
-                session.add(blur_mapping)
-            
-            session.commit() 
+                for mapping in blurred_words_and_bbox
+            ]
+
+            for i in range(0, len(blur_mappings), BATCH_SIZE):
+                session.add_all(blur_mappings[i:i + BATCH_SIZE])
+                session.commit()  
 
 
-        # Step 5: Create a zip file with the processed images
-        output_zip_path = f"{output_dir}/{uuid4().hex}.zip"
-        shutil.make_archive(output_zip_path.rstrip(".zip"), 'zip', output_dir)
+        # # Step 5: Create a zip file with the processed images
+        # output_zip_path = f"{output_dir}/{uuid4().hex}.zip"
+        # shutil.make_archive(output_zip_path.rstrip(".zip"), 'zip', output_dir)
 
-        return FileResponse(output_zip_path, media_type="application/zip")
+        # return FileResponse(output_zip_path, media_type="application/zip")
 
     except Exception as e:
         print(f"Error processing PDF: {e}")

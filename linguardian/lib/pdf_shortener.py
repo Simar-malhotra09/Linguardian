@@ -27,4 +27,4 @@ def extract_pages(input_pdf, pages_to_extract=5, start_page=30):
     print(f"Successfully saved {end_page - start_page} pages to '{output_pdf}'")
 
 # Example usage:
-extract_pages("pdfs/full-genki.pdf", pages_to_extract=5, start_page=50)
+extract_pages("/Users/simarmalhotra/Desktop/projects/romaji-redacter/pdfs/full-genki.pdf", pages_to_extract=1, start_page=55)
