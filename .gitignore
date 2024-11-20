@@ -1,5 +1,17 @@
+
+
+
+
+__pycache__/
+.pytest_cache
+*.pyc
+
 pdfs/
+
+
+
+# Ignore other files you don't want to track
+elapsed_time.txt
 output.txt
 test.py
-__pycache__/
 blur_mapping.db
