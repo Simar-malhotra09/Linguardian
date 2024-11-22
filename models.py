@@ -10,7 +10,7 @@ class ProcessedPDF(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     file_name = Column(String, nullable=False)
     file_length = Column(Integer, nullable=False, default=0)  
-    zip_path = Column(String, nullable=True)
+    file_path = Column(String, nullable=True)
 
     # Relationship to pages
     pages = relationship("PDFPage", back_populates="pdf")
