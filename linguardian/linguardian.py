@@ -63,6 +63,8 @@ class Linguardian:
         image_path=f"{self.output_pdf_path}_page_{page_num + 1}.png"
         image.save(image_path)
 
+        return image_path
+
     def process_pdf(self):
         """Process the PDF by extracting text, blurring English words, and saving the images."""
         start_time= time.time()

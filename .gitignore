@@ -10,8 +10,9 @@ pdfs/
 
 
 
-# Ignore other files you don't want to track
+
 elapsed_time.txt
 output.txt
 test.py
-blur_mapping.db
+linguardian.db
+permanent_pdfs/

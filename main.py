@@ -17,15 +17,12 @@ from models import Base,ProcessedPDF,PDFPage,BlurMapping
 
 app = FastAPI()
 
-engine= create_engine("sqlite:///blur_mapping.db", echo=True)
+engine= create_engine("sqlite:///linguardian.db", echo=True)
 Base.metadata.create_all(bind=engine)
 
 Session= sessionmaker(bind=engine)
 session=Session()
 
-output_dir = 'pdfs/db/'
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
 
 
 '''create a temp local copy of the pdf,
@@ -37,20 +34,32 @@ if not os.path.exists(output_dir):
 async def process_pdf(file: UploadFile = File(...)):
     
     session = Session()  # Create a database session
-    unique_filename = f"temp_{uuid4().hex}.pdf"
+
+    pdf_storage_dir = "permanent_pdfs"  
+    os.makedirs(pdf_storage_dir, exist_ok=True) 
+
+    unique_filename = f"{uuid4().hex}.pdf"
+    permanent_pdf_file_path = os.path.join(pdf_storage_dir, unique_filename)
+
+    output_images_dir = f"pdfs/output_images/{unique_filename}/"
+    if not os.path.exists(output_images_dir):
+        os.makedirs(output_images_dir)
+
+
 
     try:
         # Step 1: Save the uploaded PDF temporarily
-        with open(unique_filename, "wb") as f:
+        with open(permanent_pdf_file_path, "wb") as f:
             f.write(await file.read())
 
+
         # Step 2: Add PDF metadata to the database
-        new_pdf = ProcessedPDF(file_name=file.filename ,zip_path=None)
+        new_pdf = ProcessedPDF(file_name=file.filename ,file_path=permanent_pdf_file_path)
         session.add(new_pdf)
         session.commit()
 
         # Step 3: Process the PDF
-        blurrer = Linguardian(unique_filename, output_dir)
+        blurrer = Linguardian(permanent_pdf_file_path, output_images_dir)
         output_images_data = blurrer.process_pdf()  
 
         #Step 4: 
@@ -80,8 +89,8 @@ async def process_pdf(file: UploadFile = File(...)):
 
 
         # # Step 5: Create a zip file with the processed images
-        # output_zip_path = f"{output_dir}/{uuid4().hex}.zip"
-        # shutil.make_archive(output_zip_path.rstrip(".zip"), 'zip', output_dir)
+        # output_zip_path = f"{output_images_dir}/{uuid4().hex}.zip"
+        # shutil.make_archive(output_zip_path.rstrip(".zip"), 'zip', output_images_dir)
 
         # return FileResponse(output_zip_path, media_type="application/zip")
 
@@ -91,6 +100,4 @@ async def process_pdf(file: UploadFile = File(...)):
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
     finally:
-        # Step 7: Clean up
-        os.remove(unique_filename)
         session.close()
