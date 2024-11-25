@@ -1,15 +1,10 @@
-
-
-
-
 __pycache__/
-.pytest_cache
-*.pyc
+.pytest_cache/
+
+images/
 
 pdfs/
-
-
-
+pdfenv/
 
 elapsed_time.txt
 output.txt
