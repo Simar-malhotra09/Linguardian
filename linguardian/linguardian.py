@@ -5,17 +5,22 @@ import time
 from typing import List
 
 class Linguardian:
-    def __init__(self, pdf_path: str, output_pdf_path: str ):
+    def __init__(self, pdf_path: str, post_process_images: str ):
 
         list_of_blurred_words = [] 
         self.pdf_path = pdf_path
-        self.output_pdf_path = output_pdf_path
+        self.post_process_images = post_process_images
         self.list_of_blurred_words = list_of_blurred_words
 
 
     def extract_text_from_image(self, image):
         """Extract text and word positions from an image."""
         return pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT, lang='jpn+eng')
+    
+    # def get_images_from_pdf(self):
+    #     images = convert_from_path(self.pdf_path)
+    #     return images
+
     
     '''
     returns:
@@ -60,7 +65,7 @@ class Linguardian:
 
     def save_image(self, image, page_num):
         """Save the image with blurred English words."""
-        image_path=f"{self.output_pdf_path}_page_{page_num + 1}.png"
+        image_path=f"{self.post_process_images}_page_{page_num + 1}.png"
         image.save(image_path)
 
         return image_path
@@ -96,7 +101,7 @@ class Linguardian:
         time_elapsed= end_time-start_time
 
 
-        print(f"Blurred images saved as {self.output_pdf_path}_page_X.png")
+        print(f"Blurred images saved as {self.post_process_images}_page_X.png")
         print(f"Time taken: {time_elapsed} for {len(images)} pages")
         # print("\n".join(word for word in self.list_of_blurred_words))
 

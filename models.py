@@ -12,32 +12,47 @@ class ProcessedPDF(Base):
     file_length = Column(Integer, nullable=False, default=0)  
     file_path = Column(String, nullable=True)
 
-    # Relationship to pages
-    pages = relationship("PDFPage", back_populates="pdf")
+    # Relationships to preprocessed and postprocessed pages
+    preprocessed_pages = relationship("PreProcessPDFPage", back_populates="pdf", cascade="all, delete-orphan")
+    postprocessed_pages = relationship("PostProcessPDFPage", back_populates="pdf", cascade="all, delete-orphan")
 
-# Table for pages of a PDF
-class PDFPage(Base):
-    __tablename__ = 'pdf_pages'
+# Table for preprocessed pages of a PDF
+class PreProcessPDFPage(Base):
+    __tablename__ = 'preprocessed_pdf_pages'
     id = Column(Integer, primary_key=True, autoincrement=True)
     pdf_id = Column(Integer, ForeignKey("processed_pdfs.id"))
     page_number = Column(Integer, nullable=False)
     image_path = Column(Text)
 
     # Relationship to parent PDF
-    pdf = relationship("ProcessedPDF", back_populates="pages")
+    pdf = relationship("ProcessedPDF", back_populates="preprocessed_pages")
 
     # Relationship to blur mappings
-    blur_mappings = relationship("BlurMapping", back_populates="page")
+    blur_mappings = relationship("BlurMapping", back_populates="preprocessed_page", cascade="all, delete-orphan")
+
+# Table for postprocessed pages of a PDF
+class PostProcessPDFPage(Base):
+    __tablename__ = 'postprocessed_pdf_pages'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    pdf_id = Column(Integer, ForeignKey("processed_pdfs.id"))
+    page_number = Column(Integer, nullable=False)
+    image_path = Column(Text)
+
+    # Relationship to parent PDF
+    pdf = relationship("ProcessedPDF", back_populates="postprocessed_pages")
+
+    # Relationship to blur mappings
+    blur_mappings = relationship("BlurMapping", back_populates="postprocessed_page", cascade="all, delete-orphan")
 
 # Table for blur-to-word mappings
 class BlurMapping(Base):
     __tablename__ = 'blur_mappings'
     id = Column(Integer, primary_key=True, autoincrement=True)
-    page_id = Column(Integer, ForeignKey("pdf_pages.id"))
+    preprocessed_page_id = Column(Integer, ForeignKey("preprocessed_pdf_pages.id"), nullable=True)
+    postprocessed_page_id = Column(Integer, ForeignKey("postprocessed_pdf_pages.id"), nullable=True)
     bounding_box = Column(JSON, nullable=False)  # x, y, width, height
     original_word = Column(String, nullable=False)
 
-    # Relationship to parent page
-    page = relationship("PDFPage", back_populates="blur_mappings")
-
-
+    # Relationships to parent pages
+    preprocessed_page = relationship("PreProcessPDFPage", back_populates="blur_mappings")
+    postprocessed_page = relationship("PostProcessPDFPage", back_populates="blur_mappings")

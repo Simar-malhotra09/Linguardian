@@ -7,13 +7,16 @@ import shutil
 from uuid import uuid4
 from datetime import datetime, timezone
 import json
+import logging
 
+logging.basicConfig(level=logging.DEBUG)
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 
-from models import Base,ProcessedPDF,PDFPage,BlurMapping
+from models import Base,ProcessedPDF,PreProcessPDFPage, PostProcessPDFPage,BlurMapping
+from linguardian.lib.save_images_from_pdf import save_pdf_as_images
 
 app = FastAPI()
 
@@ -35,64 +38,66 @@ async def process_pdf(file: UploadFile = File(...)):
     
     session = Session()  # Create a database session
 
-    pdf_storage_dir = "permanent_pdfs"  
-    os.makedirs(pdf_storage_dir, exist_ok=True) 
-
+    ''' Create a temp pdf for the uploaded file '''
     unique_filename = f"{uuid4().hex}.pdf"
-    permanent_pdf_file_path = os.path.join(pdf_storage_dir, unique_filename)
+    temp_pdf_path=unique_filename
 
-    output_images_dir = f"pdfs/output_images/{unique_filename}/"
-    if not os.path.exists(output_images_dir):
-        os.makedirs(output_images_dir)
+
+    pre_process_images = f"/Users/simarmalhotra/Desktop/projects/romaji-redacter/images/pre_process_images/{unique_filename}/"
+    post_process_images = f"/Users/simarmalhotra/Desktop/projects/romaji-redacter/images/post_process_images/{unique_filename}/"
+
+    if not os.path.exists(pre_process_images):
+        os.makedirs(pre_process_images)
+    if not os.path.exists(post_process_images):
+        os.makedirs(post_process_images)
 
 
 
     try:
-        # Step 1: Save the uploaded PDF temporarily
-        with open(permanent_pdf_file_path, "wb") as f:
+
+        #  Step 1: Save the uploaded PDF temporarily
+        with open(temp_pdf_path, "wb") as f:
             f.write(await file.read())
+
+        image_paths = save_pdf_as_images(temp_pdf_path, pre_process_images)
 
 
         # Step 2: Add PDF metadata to the database
-        new_pdf = ProcessedPDF(file_name=file.filename ,file_path=permanent_pdf_file_path)
+        new_pdf = ProcessedPDF(file_name=file.filename ,file_path=pre_process_images)
         session.add(new_pdf)
         session.commit()
 
         # Step 3: Process the PDF
-        blurrer = Linguardian(permanent_pdf_file_path, output_images_dir)
-        output_images_data = blurrer.process_pdf()  
+        linguardian = Linguardian(temp_pdf_path, post_process_images)
+        output_images_data = linguardian.process_pdf()  
 
-        #Step 4: 
+        # Step 4: Process and save page and blur mapping data
+        blur_mappings_to_add = []
         for page_number, page_data in enumerate(output_images_data, start=1):
+            
+            
             image_path = page_data["image_path"]
             blurred_words_and_bbox = page_data["blurred_words_and_bbox"]
-            
-            # Save the page record
-            new_page = PDFPage(pdf_id=new_pdf.id, page_number=page_number, image_path=image_path)
+
+            # Save the postprocessed page record
+            new_page = PostProcessPDFPage(pdf_id=new_pdf.id, page_number=page_number, image_path=image_path)
             session.add(new_page)
-            session.commit()  # Commit to get the new page's ID
-            
-            # Save the blur mappings for this page
-            BATCH_SIZE = 100 
-            blur_mappings = [
-                BlurMapping(
-                    page_id=new_page.id,
+            session.flush()  
+
+            # Prepare blur mappings for the current page
+            for mapping in blurred_words_and_bbox:
+                blur_mapping = BlurMapping(
+                    postprocessed_page_id=new_page.id,
                     bounding_box=json.dumps(mapping["coordinates"]),
-                    original_word=mapping["word"]
+                    original_word=mapping["word"],
                 )
-                for mapping in blurred_words_and_bbox
-            ]
+                blur_mappings_to_add.append(blur_mapping)
 
-            for i in range(0, len(blur_mappings), BATCH_SIZE):
-                session.add_all(blur_mappings[i:i + BATCH_SIZE])
-                session.commit()  
+        # Batch insert blur mappings
+        session.add_all(blur_mappings_to_add)
+        session.commit()
+        logging.info("PDF processing and data insertion completed successfully.")
 
-
-        # # Step 5: Create a zip file with the processed images
-        # output_zip_path = f"{output_images_dir}/{uuid4().hex}.zip"
-        # shutil.make_archive(output_zip_path.rstrip(".zip"), 'zip', output_images_dir)
-
-        # return FileResponse(output_zip_path, media_type="application/zip")
 
     except Exception as e:
         print(f"Error processing PDF: {e}")
@@ -100,4 +105,7 @@ async def process_pdf(file: UploadFile = File(...)):
         return JSONResponse(content={"error": str(e)}, status_code=500)
 
     finally:
+        if os.path.exists(temp_pdf_path):
+            os.remove(temp_pdf_path)
+
         session.close()
