@@ -1,10 +1,18 @@
 
 from fastapi import FastAPI
+import uvicorn
 from api import pdf_processing
 
 app = FastAPI()
 app.include_router(pdf_processing.router)
+@app.get("/")
+async def root():
+    return {"message": "Hello World"}
 
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=5049)
 
 # import os
 # from fastapi import FastAPI, File, UploadFile

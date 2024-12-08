@@ -30,6 +30,9 @@ class PreProcessPDFPage(Base):
     # Relationship to blur mappings
     blur_mappings = relationship("BlurMapping", back_populates="preprocessed_page", cascade="all, delete-orphan")
 
+    # Relationship to all mappings
+    all_mappings = relationship("AllMapping", back_populates="preprocessed_page", cascade="all, delete-orphan")
+
 # Table for postprocessed pages of a PDF
 class PostProcessPDFPage(Base):
     __tablename__ = 'postprocessed_pdf_pages'
@@ -44,6 +47,9 @@ class PostProcessPDFPage(Base):
     # Relationship to blur mappings
     blur_mappings = relationship("BlurMapping", back_populates="postprocessed_page", cascade="all, delete-orphan")
 
+    # Relationship to all mappings
+    all_mappings = relationship("AllMapping", back_populates="postprocessed_page", cascade="all, delete-orphan")
+
 # Table for blur-to-word mappings
 class BlurMapping(Base):
     __tablename__ = 'blur_mappings'
@@ -56,3 +62,16 @@ class BlurMapping(Base):
     # Relationships to parent pages
     preprocessed_page = relationship("PreProcessPDFPage", back_populates="blur_mappings")
     postprocessed_page = relationship("PostProcessPDFPage", back_populates="blur_mappings")
+
+# Table for all-to-word mappings
+class AllMapping(Base):
+    __tablename__ = 'all_mappings'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    preprocessed_page_id = Column(Integer, ForeignKey("preprocessed_pdf_pages.id"), nullable=True)
+    postprocessed_page_id = Column(Integer, ForeignKey("postprocessed_pdf_pages.id"), nullable=True)
+    bounding_box = Column(JSON, nullable=False)  # x, y, width, height
+    original_word = Column(String, nullable=False)
+
+    # Relationships to parent pages
+    preprocessed_page = relationship("PreProcessPDFPage", back_populates="all_mappings")
+    postprocessed_page = relationship("PostProcessPDFPage", back_populates="all_mappings")

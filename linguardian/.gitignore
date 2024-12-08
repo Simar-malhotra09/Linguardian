@@ -1,9 +1,9 @@
 __pycache__/
 .pytest_cache/
 
-images/
+data/
 
-pdfs/
+
 pdfenv/
 
 elapsed_time.txt

@@ -18,6 +18,7 @@ class Linguardian:
     def extract_text_from_image(self, image):
         """Extract text and word positions from an image."""
         return pytesseract.image_to_data(image, output_type=pytesseract.Output.DICT, lang='jpn+eng')
+    
 
     def blur_english_words(self, image, ocr_data):
         """Blur out English words in the image."""
@@ -75,4 +76,4 @@ class Linguardian:
         print(f"Blurred images saved as {self.post_process_images}_page_X.png")
         print(f"Time taken: {time_elapsed} for {len(images)} pages")
         
-        return output_data
+        return output_data, ocr_data
