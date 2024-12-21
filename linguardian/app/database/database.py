@@ -3,7 +3,7 @@ from sqlalchemy.orm import sessionmaker
 from models.models import Base  
 
 # Set up your database URL
-DATABASE_URL = "sqlite:///./linguardian.db"  
+DATABASE_URL = "sqlite:///./test_linguardian.db"  
 
 # Create an engine that knows how to connect to your database
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})  # connect_args for SQLite

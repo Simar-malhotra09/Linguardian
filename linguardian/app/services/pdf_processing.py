@@ -33,7 +33,8 @@ async def process_pdf(file, session):
         # Process the PDF using Linguardian (if synchronous, remove await)
         output_images_data, all_mapping = linguardian.process_pdf()
 
-        # Save results to the database
+        logging.info(type(output_images_data))
+            # Save post-processed page reco:q``)# Save results to the database
         new_pdf = ProcessedPDF(file_name=file.filename, file_path=pre_process_images_dir)
         session.add(new_pdf)
         session.commit()
@@ -43,13 +44,14 @@ async def process_pdf(file, session):
         all_mappings_to_add = []
 
         for page_number, page_data in enumerate(output_images_data, start=1):
+           
             # Save post-processed page record
-            new_page = PostProcessPDFPage(pdf_id=new_pdf.id, page_number=page_number, image_path=page_data["image_path"])
-            session.add(new_page)
-            session.flush()  # Get new_page.id
+           new_page = PostProcessPDFPage(pdf_id=new_pdf.id, page_number=page_number, image_path=page_data["image_path"])
+           session.add(new_page)
+           session.flush()  # Get new_page.id
 
             # Save blur mappings for the page
-            for mapping in page_data["blurred_words_and_bbox"]:
+           for mapping in page_data["blurred_words_and_bbox"]:
                 blur_mapping = BlurMapping(
                     postprocessed_page_id=new_page.id,
                     bounding_box=json.dumps(mapping["coordinates"]),  # Store the bounding box as a JSON string
@@ -58,7 +60,7 @@ async def process_pdf(file, session):
                 blur_mappings_to_add.append(blur_mapping)
 
             # Save all mappings for the page
-            for j, word in enumerate(all_mapping['text']):
+           for j, word in enumerate(all_mapping['text']):
                 if word.strip():  
                     x, y, w, h = all_mapping['left'][j], all_mapping['top'][j], all_mapping['width'][j], all_mapping['height'][j]
                     all_mappings_to_add.append(AllMapping(
@@ -81,7 +83,7 @@ async def process_pdf(file, session):
 
     except Exception as e:
         logger.error(f"Error during PDF processing: {e}")
-        raise HTTPException(status_code=500, detail="Internal server error while processing PDF.")
+        raise HTTPException(status_code=500, detail="Internal server error @ microservice level, while processing PDF.")
 
     finally:
         clean_up(temp_pdf_path)

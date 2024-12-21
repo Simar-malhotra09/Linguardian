@@ -11,31 +11,8 @@ type Mapping = {
 
 export default function Page() {
   const [mappings, setMappings] = useState<Mapping[]>([]);
-  const [imageDimensions, setImageDimensions] = useState<{
-    width: number;
-    height: number;
-  }>({
-    width: 0,
-    height: 0,
-  });
 
-  const getImageSize = () => {
-    return {
-      width: window.innerWidth,
-      height: window.innerHeight,
-    };
-  };
-
-  useEffect(() => {
-    const handleResize = () => {
-      const { width, height } = getImageSize();
-      setImageDimensions({ width, height });
-    };
-
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
+  const [distanceFromLeft, setDistanceFromLeft] = useState(0);
 
   useEffect(() => {
     const dummyMappings: Mapping[] = [
@@ -58,16 +35,18 @@ export default function Page() {
       },
     ];
     setMappings(dummyMappings);
-    // Uncomment and use this block when fetching real data
-    // async function fetchData() {
-    //   try {
-    //     const data: Mapping[] = await getMappingsForPage(2);
-    //     setMappings(data);
-    //   } catch (error) {
-    //     console.error("Error fetching mappings:", error);
-    //   }
-    // }
-    // fetchData();
+  }, []);
+  useEffect(() => {
+    const image = document.getElementById("myImage") as HTMLImageElement | null;
+
+    if (image) {
+      const rect = image.getBoundingClientRect();
+      const distanceFromLeft = rect.left;
+      console.log(
+        `Distance from the left edge of the browser to the image: ${distanceFromLeft}px`
+      );
+      setDistanceFromLeft(distanceFromLeft);
+    }
   }, []);
 
   return (
@@ -82,6 +61,7 @@ export default function Page() {
     >
       {/* Background Image */}
       <CldImage
+        id="myImage"
         src="local_image" // Replace with your Cloudinary image public ID or path
         alt="Etext-style image"
         width={1417}
@@ -99,9 +79,7 @@ export default function Page() {
         const widthPercentage = (mapping.boundingBox.width / 1417) * 100;
         const heightPercentage = (mapping.boundingBox.height / 2028) * 100;
 
-        console.log(
-          `Mapping ${index}: x=${xPercentage}% y=${yPercentage}% width=${widthPercentage}% height=${heightPercentage}%`
-        );
+        const adjustedXPercentage = xPercentage + 10;
 
         return (
           <div
@@ -109,7 +87,7 @@ export default function Page() {
             style={{
               position: "absolute",
               top: `${yPercentage}%`,
-              left: `${xPercentage}%`,
+              left: `${adjustedXPercentage}%`,
               width: `${widthPercentage}%`,
               height: `${heightPercentage}%`,
               backgroundColor: "black", // Set the background color inside the bbox
