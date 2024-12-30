@@ -29,55 +29,54 @@ async def process_pdf(file, session):
     try:
         # Instantiate Linguardian
         linguardian = Linguardian(temp_pdf_path, post_process_images_dir, session)
-
-        # Process the PDF using Linguardian (if synchronous, remove await)
-        output_images_data, all_mapping = linguardian.process_pdf()
+        blurred_text_and_bbox, all_text_and_bbox = linguardian.process_pdf()
 
         # Save results to the database
         new_pdf = ProcessedPDF(file_name=file.filename, file_path=pre_process_images_dir)
         session.add(new_pdf)
         session.commit()
 
+        blur_mappings_to_add_to_db = []
+        all_mappings_to_add_to_db = []
 
-        blur_mappings_to_add = []
-        all_mappings_to_add = []
 
-        for page_number, page_data in enumerate(output_images_data, start=1):
+    
+
+        for page_number, (blurred_page_data, all_text_page_data) in enumerate(zip(blurred_text_and_bbox, all_text_and_bbox), start=1):
             # Save post-processed page record
-            new_page = PostProcessPDFPage(pdf_id=new_pdf.id, page_number=page_number, image_path=page_data["image_path"])
+            new_page = PostProcessPDFPage(pdf_id=new_pdf.id, page_number=page_number, image_path=blurred_page_data["image_path"])
             session.add(new_page)
             session.flush()  # Get new_page.id
 
             # Save blur mappings for the page
-            for mapping in page_data["blurred_words_and_bbox"]:
+            for mapping in blurred_page_data["blurred_text_and_bbox"]:
                 blur_mapping = BlurMapping(
                     postprocessed_page_id=new_page.id,
                     bounding_box=json.dumps(mapping["coordinates"]),  # Store the bounding box as a JSON string
                     original_word=mapping["word"],
                 )
-                blur_mappings_to_add.append(blur_mapping)
+                blur_mappings_to_add_to_db.append(blur_mapping)
 
-            # Save all mappings for the page
-            for j, word in enumerate(all_mapping['text']):
-                if word.strip():  
-                    x, y, w, h = all_mapping['left'][j], all_mapping['top'][j], all_mapping['width'][j], all_mapping['height'][j]
-                    all_mappings_to_add.append(AllMapping(
-                        postprocessed_page_id=new_page.id,
-                        bounding_box=json.dumps((x, y, x + w, y + h)),  # Store the coordinates in JSON format
-                        original_word=word
-                    ))
+            # Save all text mappings for the page
+            for mapping in all_text_page_data["all_text_and_bbox"]:
+                all_mapping = AllMapping(
+                    postprocessed_page_id=new_page.id,
+                    bounding_box=json.dumps(mapping["coordinates"]),
+                    original_word=mapping["word"],
+                )
+                all_mappings_to_add_to_db.append(all_mapping)
 
-        # Add all mappings at once to the session
-        session.add_all(blur_mappings_to_add)
-        session.add_all(all_mappings_to_add)
+            # Add all mappings at once to the session
+            session.add_all(blur_mappings_to_add_to_db)
+            session.add_all(all_mappings_to_add_to_db)
 
-        # Commit the changes
-        session.commit()
+            # Commit the changes
+            session.commit()
         
 
         
 
-        return {"pages": len(output_images_data), "blur_mappings": len(blur_mappings_to_add), "all_mappings": len(all_mappings_to_add)}
+        return {"pages": "1", "blur_mappings": len(blur_mappings_to_add_to_db), "all_mappings": len(all_mappings_to_add_to_db)}
 
     except Exception as e:
         logger.error(f"Error during PDF processing: {e}")

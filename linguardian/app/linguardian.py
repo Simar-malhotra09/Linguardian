@@ -55,6 +55,30 @@ class Linguardian:
 
         return image, all_blurred_words_and_bbox
 
+    def return_all_text(self, image, ocr_data):
+
+        img_w, img_h = image.size  
+        # Directly get dimensions from the image object
+        all_text_and_bbox=[]
+        for j, word in enumerate(ocr_data['text']):
+
+                    x, y, w, h = ocr_data['left'][j], ocr_data['top'][j], ocr_data['width'][j], ocr_data['height'][j]
+
+                    # Normalize the bounding box coordinates
+                    normalized_bbox = (
+                        x / img_w,         # Normalized X
+                        y / img_h,         # Normalized Y
+                        (x + w) / img_w,   # Normalized X + Width
+                        (y + h) / img_h    # Normalized Y + Height
+                    )
+
+                    all_text_and_bbox.append({
+                        "word": word,
+                        "coordinates": normalized_bbox
+                    })
+
+        return all_text_and_bbox
+
 
     def save_image(self, image, page_num):
         """Save the image with blurred English words."""
@@ -78,21 +102,27 @@ class Linguardian:
 
         images = convert_from_path(self.file_path)
 
-        output_data = []
+        blurred_text_output_data = []
+        all_text_output_data=[]
 
         for i, image in enumerate(images):
             ocr_data = self.extract_text_from_image(image)
             blurred_image, all_blurred_words_and_bbox = self.blur_english_words(image, ocr_data)
+            all_text= self.return_all_text(image, ocr_data)
             image_path = self.save_image(blurred_image, i)
 
-            output_data.append({
+            blurred_text_output_data.append({
                 "image_path": image_path,
-                "blurred_words_and_bbox": all_blurred_words_and_bbox
+                "blurred_text_and_bbox": all_blurred_words_and_bbox
             })
 
+            all_text_output_data.append({
+                "image_path": image_path,
+                "all_text_and_bbox": all_text
+            })
         end_time = time.time()
         time_elapsed = end_time - start_time
         print(f"Blurred images saved as {self.post_process_images}_page_X.png")
         print(f"Time taken: {time_elapsed} for {len(images)} pages")
         
-        return output_data, ocr_data
+        return blurred_text_output_data, all_text_output_data
